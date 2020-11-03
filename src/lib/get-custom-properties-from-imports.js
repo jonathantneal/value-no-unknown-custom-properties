@@ -6,11 +6,11 @@ import getCustomPropertiesFromRoot from './get-custom-properties-from-root';
 /* Get Custom Properties from CSS File
 /* ========================================================================== */
 
-async function getCustomPropertiesFromCSSFile(from) {
+async function getCustomPropertiesFromCSSFile(from, result, map) {
 	const css = await readFile(from);
 	const root = postcss.parse(css, { from });
 
-	return await getCustomPropertiesFromRoot(root);
+	return await getCustomPropertiesFromRoot(root, result, map);
 }
 
 /* Get Custom Properties from Object
@@ -47,7 +47,7 @@ async function getCustomPropertiesFromJSFile(from) {
 /* Get Custom Properties from Sources
 /* ========================================================================== */
 
-export default function getCustomPropertiesFromSources(sources) {
+export default function getCustomPropertiesFromSources(sources, {priorCustomPropertyReferences, result}) {
 	return sources.map(source => {
 		if (source instanceof Promise) {
 			return source;
@@ -74,7 +74,7 @@ export default function getCustomPropertiesFromSources(sources) {
 		const { type, from } = await source;
 
 		if (type === 'css') {
-			return Object.assign(await customProperties, await getCustomPropertiesFromCSSFile(from));
+			return Object.assign(await customProperties, await getCustomPropertiesFromCSSFile(from, result, priorCustomPropertyReferences));
 		}
 
 		if (type === 'js') {
@@ -94,6 +94,10 @@ export default function getCustomPropertiesFromSources(sources) {
 
 const readFile = from => new Promise((resolve, reject) => {
 	fs.readFile(from, 'utf8', (error, result) => {
+		// With `createRuleTester` removed, may wish to switch to anoher testing
+		// framework or tool like https://github.com/csstools/stylelint-tape :
+		// https://github.com/stylelint/stylelint/issues/4267
+		// istanbul ignore if -- tape testing framework not handling rejections
 		if (error) {
 			reject(error);
 		} else {
